@@ -40,6 +40,33 @@ Before the first e2e run, install the browser: `npx playwright install chromium`
 None are required in local mode. There are no secrets, API keys or remote endpoints. A future backend
 would need `DATABASE_URL` and a session secret (see `docs/backend-schema.prisma`).
 
+## Deploying to GitHub Pages
+
+`.github/workflows/deploy.yml` runs on every push and pull request:
+
+1. **Type-check and unit tests** (`npm run typecheck`, `npm test`).
+2. **End-to-end tests** (Playwright, Chromium). Traces and screenshots are uploaded if they fail.
+3. **Build and deploy.** This runs only on pushes to `main`, after both test jobs pass. It builds
+   with the Pages base path and publishes `dist/` with the official Pages actions.
+
+One-time setup: in the repository's **Settings → Pages → Build and deployment**, set **Source** to
+**GitHub Actions**. The site is then published at `https://<user>.github.io/<repo>/`. You can also
+start a deploy by hand from the **Actions** tab ("Run workflow").
+
+How the sub-path works:
+- `BASE_PATH` sets Vite's `base`; the workflow passes the path reported by `actions/configure-pages`
+  (`/<repo>`, or empty for a custom domain). The router's `basename` and invite links follow it via
+  `import.meta.env.BASE_URL`.
+- GitHub Pages has no rewrite rules, so the build copies `index.html` to `404.html`. Deep links and
+  reloads (for example `/<repo>/inventory`) load the app, which then routes on the client. The
+  browser console logs a 404 for such loads; that is expected.
+- To try a sub-path build locally: `BASE_PATH=/homehub npm run build && npm run preview`, then open
+  `http://localhost:4173/homehub/`.
+
+Hosting doesn't change local mode: each visitor's data stays in their own browser. Every project
+site under `<user>.github.io` shares one browser origin, so another app on that domain could read
+HomeHub's IndexedDB. Use a custom domain if that matters.
+
 ## Features
 
 - **Overview dashboard.** Answers "What needs my attention today?". It shows six summary cards, each

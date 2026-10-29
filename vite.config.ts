@@ -1,6 +1,8 @@
 /// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { copyFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 
 // The dev server relies on an inline React Refresh preamble, so the strict
@@ -32,8 +34,29 @@ function contentSecurityPolicy(): Plugin {
   };
 }
 
+// GitHub Pages has no server-side rewrites: it serves 404.html for unknown paths, so a copy of
+// the app shell there lets deep links and reloads (e.g. /homehub/inventory) start the router.
+function spaFallback(): Plugin {
+  let outDir = 'dist';
+  return {
+    name: 'homehub-spa-fallback',
+    apply: 'build',
+    configResolved: (config) => {
+      outDir = resolve(config.root, config.build.outDir);
+    },
+    closeBundle: () => copyFileSync(join(outDir, 'index.html'), join(outDir, '404.html')),
+  };
+}
+
+/** Sub-path the app is served from, e.g. `/homehub/` on GitHub Pages. Defaults to the root. */
+function basePath(): string {
+  const raw = process.env.BASE_PATH?.trim().replace(/^\/+|\/+$/g, '');
+  return raw ? `/${raw}/` : '/';
+}
+
 export default defineConfig({
-  plugins: [react(), contentSecurityPolicy()],
+  base: basePath(),
+  plugins: [react(), contentSecurityPolicy(), spaFallback()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

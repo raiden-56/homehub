@@ -40,8 +40,9 @@ export function buildInvitation(input: {
   };
 }
 
+/** Absolute invite link, including the sub-path the app is deployed under (BASE_URL ends in `/`). */
 export function inviteUrl(token: string): string {
-  return `${window.location.origin}/invite/${encodeURIComponent(token)}`;
+  return `${window.location.origin}${import.meta.env.BASE_URL}invite/${encodeURIComponent(token)}`;
 }
 
 export type InvitationCheck =
